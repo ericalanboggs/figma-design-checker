@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 12px;
+      color: #333;
+      background: #fff;
+    }
+
+    .header {
+      padding: 16px;
+      border-bottom: 1px solid #e5e5e5;
+    }
+
+    .header h1 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-primary {
+      background: #18a0fb;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #0d8de8;
+    }
+
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #e5e5e5;
+    }
+
+    .summary {
+      display: flex;
+      gap: 16px;
+      padding: 12px 16px;
+      background: #fafafa;
+      border-bottom: 1px solid #e5e5e5;
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stat-count {
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .stat-label {
+      color: #666;
+    }
+
+    .stat-error .stat-count { color: #f24822; }
+    .stat-warning .stat-count { color: #ffb800; }
+    .stat-info .stat-count { color: #18a0fb; }
+
+    .results {
+      padding: 8px 0;
+      max-height: 340px;
+      overflow-y: auto;
+    }
+
+    .empty-state {
+      padding: 40px 16px;
+      text-align: center;
+      color: #999;
+    }
+
+    .violation {
+      padding: 12px 16px;
+      border-bottom: 1px solid #f0f0f0;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .violation:hover {
+      background: #fafafa;
+    }
+
+    .violation-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .severity-badge {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .severity-error { background: #ffeae6; color: #f24822; }
+    .severity-warning { background: #fff4cc; color: #b38600; }
+    .severity-info { background: #e6f4ff; color: #0d8de8; }
+
+    .node-name {
+      font-weight: 500;
+      color: #333;
+    }
+
+    .violation-message {
+      color: #666;
+      line-height: 1.4;
+    }
+
+    .violation-actions {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-small {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+
+    .rename-input {
+      flex: 1;
+      padding: 6px 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .rename-input:focus {
+      outline: none;
+      border-color: #18a0fb;
+    }
+
+    .category-header {
+      padding: 8px 16px;
+      background: #f5f5f5;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #666;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Design Checker</h1>
+    <div class="actions">
+      <button class="btn-primary" id="run-checks">Run Checks</button>
+      <button class="btn-secondary" id="close">Close</button>
+    </div>
+  </div>
+
+  <div class="summary" id="summary" style="display: none;">
+    <div class="stat stat-error">
+      <span class="stat-count" id="error-count">0</span>
+      <span class="stat-label">Errors</span>
+    </div>
+    <div class="stat stat-warning">
+      <span class="stat-count" id="warning-count">0</span>
+      <span class="stat-label">Warnings</span>
+    </div>
+    <div class="stat stat-info">
+      <span class="stat-count" id="info-count">0</span>
+      <span class="stat-label">Info</span>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="empty-state">
+      Select layers and click "Run Checks" to audit your design.
+    </div>
+  </div>
+
+  <script>
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    let currentViolations = [];
+
+    document.getElementById('run-checks').onclick = () => {
+      parent.postMessage({ pluginMessage: { type: 'run-checks' } }, '*');
+    };
+
+    document.getElementById('close').onclick = () => {
+      parent.postMessage({ pluginMessage: { type: 'close' } }, '*');
+    };
+
+    function renderResults(data) {
+      currentViolations = data.violations;
+
+      // Update summary
+      document.getElementById('error-count').textContent = data.summary.errors;
+      document.getElementById('warning-count').textContent = data.summary.warnings;
+      document.getElementById('info-count').textContent = data.summary.info;
+      summaryEl.style.display = 'flex';
+
+      if (data.violations.length === 0) {
+        resultsEl.innerHTML = '<div class="empty-state">No issues found! Your design looks good.</div>';
+        return;
+      }
+
+      // Group by category
+      const grouped = {};
+      for (const v of data.violations) {
+        if (!grouped[v.category]) grouped[v.category] = [];
+        grouped[v.category].push(v);
+      }
+
+      let html = '';
+      for (const [category, violations] of Object.entries(grouped)) {
+        html += `<div class="category-header">${category} (${violations.length})</div>`;
+        for (const v of violations) {
+          html += `
+            <div class="violation" data-node-id="${v.nodeId}">
+              <div class="violation-header">
+                <span class="severity-badge severity-${v.severity}">${v.severity}</span>
+                <span class="node-name">${escapeHtml(v.nodeName)}</span>
+              </div>
+              <div class="violation-message">${escapeHtml(v.message)}</div>
+              ${v.fixable ? `
+                <div class="violation-actions">
+                  <input type="text" class="rename-input" placeholder="Enter new name..." value="">
+                  <button class="btn-secondary btn-small rename-btn">Rename</button>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }
+      }
+
+      resultsEl.innerHTML = html;
+
+      // Add click handlers
+      document.querySelectorAll('.violation').forEach(el => {
+        el.addEventListener('click', (e) => {
+          if (e.target.classList.contains('rename-input') || e.target.classList.contains('rename-btn')) {
+            return;
+          }
+          const nodeId = el.dataset.nodeId;
+          parent.postMessage({ pluginMessage: { type: 'select-node', nodeId } }, '*');
+        });
+      });
+
+      document.querySelectorAll('.rename-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const violation = btn.closest('.violation');
+          const nodeId = violation.dataset.nodeId;
+          const input = violation.querySelector('.rename-input');
+          const newName = input.value.trim();
+          if (newName) {
+            parent.postMessage({ pluginMessage: { type: 'rename-node', nodeId, newName } }, '*');
+          }
+        });
+      });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (!msg) return;
+
+      switch (msg.type) {
+        case 'check-results':
+          renderResults(msg.data);
+          break;
+        case 'node-renamed':
+          // Re-run checks after rename
+          parent.postMessage({ pluginMessage: { type: 'run-checks' } }, '*');
+          break;
+      }
+    };
+  </script>
+</body>
+</html>
