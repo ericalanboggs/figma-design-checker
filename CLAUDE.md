@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A Figma plugin that audits design files against a standardized checklist, reporting violations and helping designers maintain file quality and consistency.
+**athenahealth Design Checker** - A Figma plugin that audits design files against a standardized checklist, reporting violations and helping designers maintain file quality and consistency.
 
 ## Commands
 
@@ -20,30 +20,36 @@ After building, import `manifest.json` into Figma via Plugins → Development �
 
 ```
 src/
-├── main.ts           # Plugin entry point (runs in Figma sandbox)
-├── ui.html           # Results panel UI (vanilla HTML/JS)
+├── main.ts              # Plugin entry point (runs in Figma sandbox)
+├── ui.html              # Results panel UI (vanilla HTML/JS)
 └── checks/
-    └── naming.ts     # Semantic naming checker
+    ├── naming.ts        # Semantic naming checker
+    ├── autolayout.ts    # Auto-layout checker
+    ├── styles.ts        # Variables & styles checker
+    ├── components.ts    # Components checker
+    ├── hierarchy.ts     # Layer hierarchy checker
+    ├── spacing.ts       # Spacing & pixels checker
+    └── cover.ts         # Cover/documentation checker
 ```
 
 - **main.ts**: Handles Figma API calls, traverses node tree, aggregates violations from checkers, communicates with UI via postMessage
 - **ui.html**: Displays violations grouped by category, handles rename actions, click-to-select navigation
 - **checks/*.ts**: Each checker module exports a function that takes `SceneNode[]` and returns `Violation[]`
 
-## Design Checklist to Implement
+## Design Checklist
 
 The plugin checks against this checklist:
 
 | Category | Status | Checks |
 |----------|--------|--------|
 | Semantic naming | ✅ Done | Flag "Frame 123", "Group 456", pure numbers; check parent-child naming consistency |
-| Auto-layout | ⬜ Todo | Detect frames without auto-layout; flag absolute positioning |
-| Variables & Styles | ⬜ Todo | Flag raw hex colors; check for unlinked text/effect styles; find unused variables |
-| Components | ⬜ Todo | Detect detached instances; find duplicate local components |
-| Layer hierarchy | ⬜ Todo | Flag groups that should be frames; warn on deep nesting (>5 levels) |
-| Spacing & Pixels | ⬜ Todo | Flag non-4/8px spacing; detect sub-pixel values; check radius consistency |
-| Cover & Description | ⬜ Todo | Check for title, owner, team, version, last updated; Description section exists |
-| Pages & Sections | ⬜ Todo | Exploration/Components/Flows/Archive pages exist; sections used for grouping |
+| Auto-layout | ✅ Done | Detect frames without auto-layout (excludes top-level frames) |
+| Variables & Styles | ✅ Done | Flag raw hex colors; check for unlinked text/effect styles |
+| Components | ✅ Done | Find duplicate local components with identical names |
+| Layer hierarchy | ✅ Done | Flag groups that should be frames; warn on deep nesting (>7 levels) |
+| Spacing & Pixels | ✅ Done | Flag non-8px spacing; detect sub-pixel values in position and size |
+| Cover & Description | ✅ Done | Check for Cover frame on first page |
+| Pages & Sections | ➖ Skipped | Not enforced per project requirements |
 
 ## Adding a New Checker
 

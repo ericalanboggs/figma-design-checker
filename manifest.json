@@ -1,5 +1,5 @@
 {
-  "name": "Design Checker",
+  "name": "athenahealth Design Checker",
   "id": "design-checker-plugin",
   "api": "1.0.0",
   "main": "dist/main.js",

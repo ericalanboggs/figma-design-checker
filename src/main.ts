@@ -1,4 +1,10 @@
 import { checkNaming } from './checks/naming';
+import { checkAutoLayout } from './checks/autolayout';
+import { checkStyles } from './checks/styles';
+import { checkComponents } from './checks/components';
+import { checkHierarchy } from './checks/hierarchy';
+import { checkSpacing } from './checks/spacing';
+import { checkCover } from './checks/cover';
 
 export interface Violation {
   nodeId: string;
@@ -54,6 +60,12 @@ function runChecks(): CheckResult {
 
   const violations: Violation[] = [
     ...checkNaming(allNodes),
+    ...checkAutoLayout(allNodes),
+    ...checkStyles(allNodes),
+    ...checkComponents(allNodes),
+    ...checkHierarchy(allNodes),
+    ...checkSpacing(allNodes),
+    ...checkCover(),
   ];
 
   const summary = {
